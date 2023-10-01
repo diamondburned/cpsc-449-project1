@@ -1,26 +1,21 @@
 import collections
 import contextlib
 import logging.config
-import sqlite3
 import typing
+import aiosqlite
 
 from fastapi.responses import HTMLResponse
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings
-
-
-def get_db():
-    with contextlib.closing(sqlite3.connect("database.db")) as db:
-        db.row_factory = sqlite3.Row
-        yield db
+from database import get_db, fetch_rows
+from models import *
 
 
 app = FastAPI()
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root():
+async def index():
     html_content = """
     <html>
         <head>
@@ -34,37 +29,39 @@ async def read_root():
     return HTMLResponse(content=html_content)
 
 
-@app.get("/users/")
-def list_users(db: sqlite3.Connection = Depends(get_db)):
-    users = db.execute("SELECT * FROM users")
-    return {"users": users.fetchall()}
+@app.get("/users")
+async def list_users(db=Depends(get_db)) -> list[User]:
+    users = await fetch_rows(db, "SELECT * FROM users")
+    return [User(**user) for user in users]
 
 
-@app.get("/departments/")
-def list_departments(db: sqlite3.Connection = Depends(get_db)):
-    departments = db.execute("SELECT * FROM departments")
-    return {"departments": departments.fetchall()}
+@app.get("/departments")
+async def list_departments(
+    db=Depends(get_db),
+) -> list[Department]:
+    departments = await fetch_rows(db, "SELECT * FROM departments")
+    return [Department(**department) for department in departments]
 
 
-@app.get("/courses/")
-def list_courses(db: sqlite3.Connection = Depends(get_db)):
-    courses = db.execute("SELECT * FROM courses")
-    return {"courses": courses.fetchall()}
+@app.get("/courses")
+async def list_courses(db=Depends(get_db)) -> list[Course]:
+    courses = await fetch_rows(db, "SELECT * FROM courses")
+    return [Course(**course) for course in courses]
 
 
-@app.get("/sections/")
-def list_sections(db: sqlite3.Connection = Depends(get_db)):
-    sections = db.execute("SELECT * FROM sections")
-    return {"sections": sections.fetchall()}
+@app.get("/sections")
+async def list_sections(db=Depends(get_db)) -> list[Section]:
+    sections = await fetch_rows(db, "SELECT * FROM sections")
+    return [Section(**section) for section in sections]
 
 
-@app.get("/enrollments/")
-def list_enrollments(db: sqlite3.Connection = Depends(get_db)):
-    enrollments = db.execute("SELECT * FROM enrollments")
-    return {"enrollments": enrollments.fetchall()}
+@app.get("/enrollments")
+async def list_enrollments(db=Depends(get_db)) -> list[Enrollment]:
+    enrollments = await fetch_rows(db, "SELECT * FROM enrollments")
+    return [Enrollment(**enrollment) for enrollment in enrollments]
 
 
-@app.get("/waitlist/")
-def list_waitlist(db: sqlite3.Connection = Depends(get_db)):
-    waitlist = db.execute("SELECT * FROM waitlist")
-    return {"waitlist": waitlist.fetchall()}
+@app.get("/waitlist")
+async def list_waitlist(db=Depends(get_db)) -> list[Waitlist]:
+    waitlist = await fetch_rows(db, "SELECT * FROM waitlist")
+    return [Waitlist(**waitlist) for waitlist in waitlist]
