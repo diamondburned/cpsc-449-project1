@@ -11,6 +11,7 @@ pkgs.mkShell {
 		python
 		pyright
 		sqlite
+		sqlfluff
 		litecli
 	];
 
