@@ -51,6 +51,13 @@ CREATE TABLE waitlist (
     PRIMARY KEY (user_id, section_id)
 );
 
+CREATE TABLE sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users (id),
+    token TEXT NOT NULL,
+    expiration INTEGER NOT NULL -- UNIX timestamp
+);
+
 INSERT INTO users VALUES
 (1, 'John', 'Doe', 'Student'),
 (2, 'Kenytt', 'Avery', 'Instructor'),

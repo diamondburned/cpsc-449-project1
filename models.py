@@ -1,4 +1,11 @@
+from enum import Enum
 from pydantic import BaseModel
+
+
+class Role(str, Enum):
+    student = "Student"
+    registrar = "Registrar"
+    instructor = "Instructor"
 
 
 class User(BaseModel):
@@ -45,3 +52,10 @@ class Waitlist(BaseModel):
     section_id: int
     position: int
     date: str
+
+
+class Session(BaseModel):
+    id: int
+    user_id: int
+    token: str
+    expiry: int  # unix timestamp
