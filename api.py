@@ -34,41 +34,6 @@ async def index():
     return HTMLResponse(content=html_content)
 
 
-# @app.post("/login")
-# async def login(
-#     request: LoginRequest,
-#     db: aiosqlite.Connection = Depends(get_db),
-# ) -> LoginResponse:
-#     # Have the token live for 7 days
-#     TOKEN_AGE = 7 * 24 * 60 * 60
-#
-#     async with db.execute(
-#         """
-#         SELECT *
-#         FROM users
-#         WHERE first_name = ? AND last_name = ?
-#         """,
-#         (request.first_name, request.last_name),
-#     ) as cursor:
-#         user = await cursor.fetchone()
-#         if user is None:
-#             raise HTTPException(status_code=404, detail="User not found")
-#
-#         user = User(**dict(user))
-#         token = secrets.token_urlsafe(32)
-#         expiry = int(time.time()) + TOKEN_AGE
-#
-#         await db.execute(
-#             """
-#             INSERT INTO sessions (user_id, token, expiry)
-#             VALUES (?, ?, ?)
-#             """,
-#             (user.id, token, expiry),
-#         )
-#
-#         return LoginResponse(user=user, token=token, expiry=expiry)
-
-
 # The API should allow students to:
 #  - List available classes (/courses)
 #  - Attempt to enroll in a class
@@ -198,3 +163,37 @@ async def list_user_enrollments(
 #     user: User = Depends(authorize_user),
 # ) -> list[Waitlist]:
 #     return await fetch_rows(db, Waitlist, "SELECT * FROM waitlist")
+
+# @app.post("/login")
+# async def login(
+#     request: LoginRequest,
+#     db: aiosqlite.Connection = Depends(get_db),
+# ) -> LoginResponse:
+#     # Have the token live for 7 days
+#     TOKEN_AGE = 7 * 24 * 60 * 60
+#
+#     async with db.execute(
+#         """
+#         SELECT *
+#         FROM users
+#         WHERE first_name = ? AND last_name = ?
+#         """,
+#         (request.first_name, request.last_name),
+#     ) as cursor:
+#         user = await cursor.fetchone()
+#         if user is None:
+#             raise HTTPException(status_code=404, detail="User not found")
+#
+#         user = User(**dict(user))
+#         token = secrets.token_urlsafe(32)
+#         expiry = int(time.time()) + TOKEN_AGE
+#
+#         await db.execute(
+#             """
+#             INSERT INTO sessions (user_id, token, expiry)
+#             VALUES (?, ?, ?)
+#             """,
+#             (user.id, token, expiry),
+#         )
+#
+#         return LoginResponse(user=user, token=token, expiry=expiry)
