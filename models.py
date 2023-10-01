@@ -2,27 +2,27 @@ from pydantic import BaseModel
 
 
 class User(BaseModel):
-    user_id: int
+    id: int
     first_name: str
     last_name: str
     role: str
 
 
 class Department(BaseModel):
-    department_num: int
+    id: int
     name: str
 
 
 class Course(BaseModel):
-    course_num: int
-    department_num: int
+    id: int
     name: str
+    department_num: int
 
 
 class Section(BaseModel):
-    course_num: int
-    section_num: int
-    classroom: str
+    id: int
+    course_id: int
+    classroom: str | None
     enrolled: int
     capacity: int
     waitlist_capacity: int
@@ -34,13 +34,13 @@ class Section(BaseModel):
 
 class Enrollment(BaseModel):
     user_id: int
-    section_num: int
+    section_id: int
     status: str
     grade: str
 
 
 class Waitlist(BaseModel):
     user_id: int
-    section_num: int
+    section_id: int
     position: int
     date: str
