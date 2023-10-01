@@ -11,3 +11,7 @@ class LoginResponse(BaseModel):
     user: User
     token: str
     expiry: int
+
+
+class ListEnrollmentsResponse(BaseModel):
+    enrollments: list[Enrollment]

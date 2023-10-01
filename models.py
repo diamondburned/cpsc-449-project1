@@ -3,16 +3,16 @@ from pydantic import BaseModel
 
 
 class Role(str, Enum):
-    student = "Student"
-    registrar = "Registrar"
-    instructor = "Instructor"
+    STUDENT = "Student"
+    REGISTRAR = "Registrar"
+    INSTRUCTOR = "Instructor"
 
 
 class User(BaseModel):
     id: int
     first_name: str
     last_name: str
-    role: str
+    role: Role
 
 
 class Department(BaseModel):
@@ -24,38 +24,43 @@ class Course(BaseModel):
     id: int
     code: str
     name: str
-    department_id: int
+    department: Department
 
 
 class Section(BaseModel):
     id: int
-    course_id: int
+    course: Course
     classroom: str | None
-    enrolled: int
     capacity: int
     waitlist_capacity: int
     day: str
-    beg_time: str
+    begin_time: str
     end_time: str
-    instructor: int
+    instructor: User
+
+
+class EnrollmentStatus(str, Enum):
+    ENROLLED = "Enrolled"
+    WAITLISTED = "Waitlisted"
+    DROPPED = "Dropped"
 
 
 class Enrollment(BaseModel):
-    user_id: int
-    section_id: int
-    status: str
-    grade: str
+    user: User
+    section: Section
+    status: EnrollmentStatus
+    grade: str | None
 
 
 class Waitlist(BaseModel):
-    user_id: int
-    section_id: int
+    user: User
+    section: Section
     position: int
     date: str
 
 
 class Session(BaseModel):
     id: int
-    user_id: int
+    user: User
     token: str
     expiry: int  # unix timestamp

@@ -25,7 +25,6 @@ CREATE TABLE sections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     course_id INTEGER NOT NULL REFERENCES courses (id),
     classroom TEXT, -- NULL if online
-    enrolled INTEGER NOT NULL,
     capacity INTEGER NOT NULL,
     waitlist_capacity INTEGER NOT NULL,
     day TEXT NOT NULL,
@@ -51,11 +50,12 @@ CREATE TABLE waitlist (
     PRIMARY KEY (user_id, section_id)
 );
 
+-- This is unused. Whoops.
 CREATE TABLE sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users (id),
     token TEXT NOT NULL,
-    expiration INTEGER NOT NULL -- UNIX timestamp
+    expiry INTEGER NOT NULL -- UNIX timestamp
 );
 
 INSERT INTO users VALUES
@@ -84,7 +84,32 @@ INSERT INTO courses VALUES
 (2, 'MATH 150A', 'Calculus I', 3);
 
 INSERT INTO sections VALUES
-(1, 1, 'CS102', 0, 30, 15, 'Tuesday', '7pm', '9:45pm', 2),
-(2, 1, 'CS104', 0, 30, 15, 'Wednesday', '4pm', '6:45pm', 2),
-(3, 2, 'MH302', 0, 35, 15, 'Monday', '12pm', '2:45pm', 4),
-(4, 2, 'MH107', 0, 32, 15, 'Thursday', '9am', '11:30am', 4);
+(1, 1, 'CS102', 30, 15, 'Tuesday', '7pm', '9:45pm', 2),
+(2, 1, 'CS104', 30, 15, 'Wednesday', '4pm', '6:45pm', 2),
+(3, 2, 'MH302', 35, 15, 'Monday', '12pm', '2:45pm', 4),
+(4, 2, 'MH107', 32, 15, 'Thursday', '9am', '11:30am', 4);
+
+INSERT INTO enrollments VALUES
+(5, 1, 'Enrolled', 'A', '2023-09-15'),
+(6, 1, 'Enrolled', 'B', '2023-09-15'),
+(7, 1, 'Enrolled', 'C', '2023-09-15'),
+(8, 1, 'Enrolled', 'B+', '2023-09-15'),
+(9, 2, 'Enrolled', 'A-', '2023-09-15'),
+(10, 2, 'Dropped', NULL, '2023-09-15'),
+(11, 2, 'Enrolled', 'A+', '2023-09-15'),
+(12, 3, 'Enrolled', 'C+', '2023-09-15'),
+(13, 3, 'Dropped', NULL, '2023-09-15'),
+(14, 4, 'Enrolled', 'A-', '2023-09-15'),
+(5, 3, 'Enrolled', 'B', '2023-09-15'),
+(6, 4, 'Enrolled', 'B', '2023-09-15'),
+(7, 2, 'Enrolled', 'B', '2023-09-15');
+
+-- For waitlist table
+INSERT INTO waitlist VALUES
+(8, 3, 1, '2023-09-15'),
+(9, 2, 1, '2023-09-15'),
+(10, 4, 2, '2023-09-15'),
+(11, 1, 2, '2023-09-15'),
+(12, 3, 3, '2023-09-15'),
+(13, 1, 3, '2023-09-15'),
+(14, 2, 4, '2023-09-15');
