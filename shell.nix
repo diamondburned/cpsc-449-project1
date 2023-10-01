@@ -13,6 +13,7 @@ pkgs.mkShell {
 		sqlite
 		sqlfluff
 		litecli
+		foreman
 	];
 
 	shellHook = ''

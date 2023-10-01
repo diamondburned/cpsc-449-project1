@@ -11,5 +11,5 @@ First, create the database with the following command:
 Then, run the server with the following command:
 
 ```bash
-./serve.sh
+foreman start
 ```
