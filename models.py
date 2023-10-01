@@ -15,8 +15,9 @@ class Department(BaseModel):
 
 class Course(BaseModel):
     id: int
+    code: str
     name: str
-    department_num: int
+    department_id: int
 
 
 class Section(BaseModel):
