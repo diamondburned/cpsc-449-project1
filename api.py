@@ -31,37 +31,29 @@ async def index():
 
 @app.get("/users")
 async def list_users(db=Depends(get_db)) -> list[User]:
-    users = await fetch_rows(db, "SELECT * FROM users")
-    return [User(**user) for user in users]
+    return await fetch_rows(db, User, "SELECT * FROM users")
 
 
 @app.get("/departments")
-async def list_departments(
-    db=Depends(get_db),
-) -> list[Department]:
-    departments = await fetch_rows(db, "SELECT * FROM departments")
-    return [Department(**department) for department in departments]
+async def list_departments(db=Depends(get_db)) -> list[Department]:
+    return await fetch_rows(db, Department, "SELECT * FROM departments")
 
 
 @app.get("/courses")
 async def list_courses(db=Depends(get_db)) -> list[Course]:
-    courses = await fetch_rows(db, "SELECT * FROM courses")
-    return [Course(**course) for course in courses]
+    return await fetch_rows(db, Course, "SELECT * FROM courses")
 
 
 @app.get("/sections")
 async def list_sections(db=Depends(get_db)) -> list[Section]:
-    sections = await fetch_rows(db, "SELECT * FROM sections")
-    return [Section(**section) for section in sections]
+    return await fetch_rows(db, Section, "SELECT * FROM sections")
 
 
 @app.get("/enrollments")
 async def list_enrollments(db=Depends(get_db)) -> list[Enrollment]:
-    enrollments = await fetch_rows(db, "SELECT * FROM enrollments")
-    return [Enrollment(**enrollment) for enrollment in enrollments]
+    return await fetch_rows(db, Enrollment, "SELECT * FROM enrollments")
 
 
 @app.get("/waitlist")
 async def list_waitlist(db=Depends(get_db)) -> list[Waitlist]:
-    waitlist = await fetch_rows(db, "SELECT * FROM waitlist")
-    return [Waitlist(**waitlist) for waitlist in waitlist]
+    return await fetch_rows(db, Waitlist, "SELECT * FROM waitlist")

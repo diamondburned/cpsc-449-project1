@@ -1,6 +1,6 @@
 import contextlib
 import aiosqlite
-from typing import AsyncGenerator, Iterable
+from typing import AsyncGenerator, Iterable, Type
 
 SQLITE_DATABASE = "database.db"
 
@@ -29,7 +29,22 @@ async def get_db(read_only=False) -> AsyncGenerator[aiosqlite.Connection, None]:
 
 
 async def fetch_rows(
-    db: aiosqlite.Connection, sql: str, params=()
-) -> Iterable[aiosqlite.Row]:
+    db: aiosqlite.Connection,
+    type: Type,
+    sql: str,
+    params=(),
+) -> list[Type]:
     async with db.execute(sql, params) as cursor:
-        return await cursor.fetchall()
+        rows = await cursor.fetchall()
+        return [type(**row) for row in rows]
+
+
+async def fetch_row(
+    db: aiosqlite.Connection,
+    type: Type,
+    sql: str,
+    params=(),
+) -> Type:
+    async with db.execute(sql, params) as cursor:
+        row = await cursor.fetchone()
+        return type(**row) if row else None
