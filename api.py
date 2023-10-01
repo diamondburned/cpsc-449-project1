@@ -10,7 +10,7 @@ import aiosqlite
 from fastapi.responses import HTMLResponse
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
-from database import get_db, fetch_rows, fetch_row, extract_dict
+from database import extract_row, get_db, fetch_rows, fetch_row
 
 from models import *
 from model_requests import *
@@ -143,7 +143,7 @@ async def list_course_sections(
         """,
         (course_id,),
     )
-    return await database.list_sections(db, [row["id"] for row in section_ids])
+    return await database.list_sections(db, [row["sections.id"] for row in section_ids])
 
 
 @app.get("/users")
@@ -162,7 +162,7 @@ async def get_user(
     user = await fetch_row(db, "SELECT * FROM users WHERE id = ?", (user_id,))
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return User(**dict(user))
+    return User(**extract_row(user, "users"))
 
 
 @app.get("/users/{user_id}/enrollments")
@@ -172,7 +172,7 @@ async def list_user_enrollments(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> list[Enrollment]:
     print(user_id, status)
-    enrollment_ids_rows = await fetch_rows(
+    rows = await fetch_rows(
         db,
         """
         SELECT enrollments.user_id, enrollments.section_id
@@ -184,9 +184,10 @@ async def list_user_enrollments(
         """,
         ("Dropped", user_id, user_id),
     )
+    rows = [extract_row(row, "enrollments") for row in rows]
     return await database.list_enrollments(
         db,
-        [(row["user_id"], row["section_id"]) for row in enrollment_ids_rows],
+        [(row["user_id"], row["section_id"]) for row in rows],
     )
 
 

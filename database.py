@@ -9,9 +9,19 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 SQLITE_DATABASE = "database.db"
 
 SQLITE_PRAGMA = """
+-- Permit SQLite to be concurrently safe.
 PRAGMA journal_mode = WAL;
+
+-- Enable foreign key constraints.
 PRAGMA foreign_keys = ON;
+
+-- Enforce column types.
 PRAGMA strict = ON;
+
+-- Force queries to prefix column names with table names.
+-- See https://www2.sqlite.org/cvstrac/wiki?p=ColumnNames.
+PRAGMA full_column_names = ON;
+PRAGMA short_column_names = OFF;
 """
 
 
@@ -20,9 +30,8 @@ async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
     async with aiosqlite.connect(SQLITE_DATABASE) as db:
         db.row_factory = aiosqlite.Row
 
-        if not read_only:
-            # These pragmas are only relevant for write operations.
-            await db.executescript(SQLITE_PRAGMA)
+        # These pragmas are only relevant for write operations.
+        await db.executescript(SQLITE_PRAGMA)
 
         try:
             yield db
@@ -62,6 +71,13 @@ def extract_dict(d: dict, prefix: str) -> dict:
     return {k[len(prefix) :]: v for k, v in d.items() if k.startswith(prefix)}
 
 
+def extract_row(row: aiosqlite.Row, table: str) -> dict:
+    """
+    Extracts all keys from a row that originate from a given table.
+    """
+    return extract_dict(dict(row), table + ".")
+
+
 def exclude_dict(d: dict, keys: Iterable[str]) -> dict:
     """
     Returns a copy of a dictionary without the given keys.
@@ -77,9 +93,7 @@ async def authorize(
         """
         SELECT
             users.*,
-            sessions.id AS sessions_id,
-            sessions.token AS sessions_token,
-            sessions.expiry AS sessions_expiry
+            sessions.*
         FROM sessions
         INNER JOIN users ON sessions.user_id = users.id
         WHERE token = ? AND expiry > ?
@@ -90,14 +104,10 @@ async def authorize(
         if row is None:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        user = User(**dict(row))
-        session = Session(
-            id=row["sessions_id"],
-            user=user,
-            token=row["sessions_token"],
-            expiry=row["sessions_expiry"],
+        return Session(
+            **extract_row(row, "sessions"),
+            user=User(**extract_row(row, "users")),
         )
-        return session
 
 
 async def list_courses(
@@ -109,8 +119,7 @@ async def list_courses(
         """
         SELECT
             courses.*,
-            departments.id AS departments_id,
-            departments.name AS departments_name
+            departments.*
         FROM courses
         INNER JOIN departments ON departments.id = courses.department_id
         """
@@ -123,8 +132,8 @@ async def list_courses(
     )
     return [
         Course(
-            **dict(row),
-            department=Department(**extract_dict(dict(row), "departments_")),
+            **extract_row(row, "courses"),
+            department=Department(**extract_row(row, "departments")),
         )
         for row in courses_rows
     ]
@@ -137,18 +146,11 @@ async def list_enrollments(
     q = """
         SELECT
             courses.*,
-            courses.id AS courses_id,
             sections.*,
-            sections.id AS sections_id,
             enrollments.*,
-            users.id AS users_id,
-            users.first_name AS users_first_name,
-            users.last_name AS users_last_name,
-            users.role AS users_role,
-            instructors.id AS instructors_id,
-            instructors.first_name AS instructors_first_name,
-            instructors.last_name AS instructors_last_name,
-            instructors.role AS instructors_role
+            departments.*,
+            users.*,
+            instructors.*
         FROM enrollments
         INNER JOIN users ON users.id = enrollments.user_id
         INNER JOIN sections ON sections.id = enrollments.section_id
@@ -163,24 +165,20 @@ async def list_enrollments(
         )
         p = [item for sublist in user_section_ids for item in sublist]  # flatten list
 
-    print(q, p)
-
     rows = await fetch_rows(db, q, p)
-    # Remove conflicting ID columns
-    rows = [exclude_dict(dict(row), "id") for row in rows]
     return [
         Enrollment(
-            **dict(row),
-            user=User(**extract_dict(dict(row), "users_")),
+            **extract_row(row, "enrollments"),
+            user=User(**extract_row(row, "users")),
             section=Section(
-                **dict(row),
-                id=row["sections_id"],
+                **extract_row(row, "sections"),
                 course=Course(
-                    **dict(row),
-                    id=row["courses_id"],
-                    department=Department(**dict(row)),
+                    **extract_row(row, "courses"),
+                    department=Department(
+                        **extract_row(row, "departments"),
+                    ),
                 ),
-                instructor=User(**extract_dict(dict(row), "instructors_")),
+                instructor=User(**extract_row(row, "instructors")),
             ),
         )
         for row in rows
@@ -196,15 +194,9 @@ async def list_sections(
         """
         SELECT
             sections.*,
-            sections.id AS sections_id,
             courses.*,
-            courses.id AS courses_id,
-            departments.id AS departments_id,
-            departments.name AS departments_name,
-            instructors.id AS instructors_id,
-            instructors.first_name AS instructors_first_name,
-            instructors.last_name AS instructors_last_name,
-            instructors.role AS instructors_role
+            departments.*,
+            instructors.*
         FROM sections
         INNER JOIN courses ON courses.id = sections.course_id
         INNER JOIN departments ON departments.id = courses.department_id
@@ -217,18 +209,16 @@ async def list_sections(
         ),
         section_ids,
     )
-    # Remove conflicting ID columns
-    rows = [exclude_dict(dict(row), "id") for row in rows]
     return [
         Section(
-            **dict(row),
-            id=row["sections_id"],
+            **extract_row(row, "sections"),
             course=Course(
-                **dict(row),
-                id=row["courses_id"],
-                department=Department(**extract_dict(dict(row), "departments_")),
+                **extract_row(row, "courses"),
+                department=Department(
+                    **extract_row(row, "departments"),
+                ),
             ),
-            instructor=User(**extract_dict(dict(row), "instructors_")),
+            instructor=User(**extract_row(row, "instructors")),
         )
         for row in rows
     ]
