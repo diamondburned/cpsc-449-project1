@@ -1,7 +1,7 @@
 import contextlib
-import aiosqlite
+import sqlite3
 import time
-from typing import AsyncGenerator, Iterable, Type
+from typing import Generator, Iterable, Type
 from models import *
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -25,41 +25,44 @@ PRAGMA short_column_names = OFF;
 """
 
 
-async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
+def get_db() -> Generator[sqlite3.Connection, None, None]:
     read_only = False  # TODO: split to a different function
-    async with aiosqlite.connect(SQLITE_DATABASE) as db:
-        db.row_factory = aiosqlite.Row
+    with sqlite3.connect(SQLITE_DATABASE) as db:
+        db.row_factory = sqlite3.Row
 
         # These pragmas are only relevant for write operations.
-        await db.executescript(SQLITE_PRAGMA)
+        cur = db.executescript(SQLITE_PRAGMA)
+        cur.close()
 
         try:
             yield db
         finally:
             if read_only:
-                await db.rollback()
+                db.rollback()
             else:
-                await db.commit()
+                db.commit()
 
 
-async def fetch_rows(
-    db: aiosqlite.Connection,
+def fetch_rows(
+    db: sqlite3.Connection,
     sql: str,
     params=(),
-) -> list[aiosqlite.Row]:
-    async with db.execute(sql, params) as cursor:
-        rows = await cursor.fetchall()
-        return [row for row in rows]
+) -> list[sqlite3.Row]:
+    cursor = db.execute(sql, params)
+    rows = cursor.fetchall()
+    cursor.close()
+    return [row for row in rows]
 
 
-async def fetch_row(
-    db: aiosqlite.Connection,
+def fetch_row(
+    db: sqlite3.Connection,
     sql: str,
     params=(),
-) -> aiosqlite.Row | None:
-    async with db.execute(sql, params) as cursor:
-        row = await cursor.fetchone()
-        return row
+) -> sqlite3.Row | None:
+    cursor = db.execute(sql, params)
+    row = cursor.fetchone()
+    cursor.close()
+    return row
 
 
 def extract_dict(d: dict, prefix: str) -> dict:
@@ -71,7 +74,7 @@ def extract_dict(d: dict, prefix: str) -> dict:
     return {k[len(prefix) :]: v for k, v in d.items() if k.startswith(prefix)}
 
 
-def extract_row(row: aiosqlite.Row, table: str) -> dict:
+def extract_row(row: sqlite3.Row, table: str) -> dict:
     """
     Extracts all keys from a row that originate from a given table.
     """
@@ -85,11 +88,11 @@ def exclude_dict(d: dict, keys: Iterable[str]) -> dict:
     return {k: v for k, v in d.items() if k not in keys}
 
 
-async def authorize(
-    db: aiosqlite.Connection = Depends(get_db),
+def authorize(
+    db: sqlite3.Connection = Depends(get_db),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
 ) -> Session:
-    async with db.execute(
+    cursor = db.execute(
         """
         SELECT
             users.*,
@@ -99,22 +102,24 @@ async def authorize(
         WHERE token = ? AND expiry > ?
         """,
         (credentials.credentials, int(time.time())),
-    ) as cursor:
-        row = await cursor.fetchone()
-        if row is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+    )
+    row = cursor.fetchone()
+    cursor.close()
 
-        return Session(
-            **extract_row(row, "sessions"),
-            user=User(**extract_row(row, "users")),
-        )
+    if row is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    return Session(
+        **extract_row(row, "sessions"),
+        user=User(**extract_row(row, "users")),
+    )
 
 
-async def list_courses(
-    db: aiosqlite.Connection,
+def list_courses(
+    db: sqlite3.Connection,
     course_ids: list[int] | None = None,
 ) -> list[Course]:
-    courses_rows = await fetch_rows(
+    courses_rows = fetch_rows(
         db,
         """
         SELECT
@@ -139,8 +144,8 @@ async def list_courses(
     ]
 
 
-async def list_enrollments(
-    db: aiosqlite.Connection,
+def list_enrollments(
+    db: sqlite3.Connection,
     user_section_ids: list[tuple[int, int]] | None = None,
 ) -> list[Enrollment]:
     q = """
@@ -165,7 +170,7 @@ async def list_enrollments(
         )
         p = [item for sublist in user_section_ids for item in sublist]  # flatten list
 
-    rows = await fetch_rows(db, q, p)
+    rows = fetch_rows(db, q, p)
     return [
         Enrollment(
             **extract_row(row, "enrollments"),
@@ -185,11 +190,11 @@ async def list_enrollments(
     ]
 
 
-async def list_sections(
-    db: aiosqlite.Connection,
+def list_sections(
+    db: sqlite3.Connection,
     section_ids: list[int] | None = None,
 ) -> list[Section]:
-    rows = await fetch_rows(
+    rows = fetch_rows(
         db,
         """
         SELECT

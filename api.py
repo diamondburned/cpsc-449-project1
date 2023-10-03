@@ -4,8 +4,8 @@ import logging.config
 import secrets
 import base64
 import time
+import sqlite3
 import database
-import aiosqlite
 
 from fastapi.responses import HTMLResponse
 from fastapi import FastAPI, Depends, HTTPException
@@ -20,7 +20,7 @@ app = FastAPI()
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+def index():
     html_content = """
     <html>
         <head>
@@ -77,29 +77,29 @@ async def index():
 
 
 @app.get("/courses")
-async def list_courses(
-    db: aiosqlite.Connection = Depends(get_db),
+def list_courses(
+    db: sqlite3.Connection = Depends(get_db),
 ) -> list[Course]:
-    return await database.list_courses(db)
+    return database.list_courses(db)
 
 
 @app.get("/courses/{course_id}")
-async def get_course(
+def get_course(
     course_id: int,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
 ) -> Course:
-    courses = await database.list_courses(db, [course_id])
+    courses = database.list_courses(db, [course_id])
     if len(courses) == 0:
         raise HTTPException(status_code=404, detail="Course not found")
     return courses[0]
 
 
 @app.get("/courses/{course_id}/sections")
-async def list_course_sections(
+def list_course_sections(
     course_id: int,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
 ) -> list[Section]:
-    section_ids = await fetch_rows(
+    section_ids = fetch_rows(
         db,
         """
         SELECT id
@@ -108,36 +108,36 @@ async def list_course_sections(
         """,
         (course_id,),
     )
-    return await database.list_sections(db, [row["sections.id"] for row in section_ids])
+    return database.list_sections(db, [row["sections.id"] for row in section_ids])
 
 
 @app.get("/users")
-async def list_users(
-    db: aiosqlite.Connection = Depends(get_db),
+def list_users(
+    db: sqlite3.Connection = Depends(get_db),
 ) -> list[User]:
-    users_rows = await fetch_rows(db, "SELECT * FROM users")
+    users_rows = fetch_rows(db, "SELECT * FROM users")
     return [User(**dict(row)) for row in users_rows]
 
 
 @app.get("/users/{user_id}")
-async def get_user(
+def get_user(
     user_id: int,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
 ) -> User:
-    user = await fetch_row(db, "SELECT * FROM users WHERE id = ?", (user_id,))
+    user = fetch_row(db, "SELECT * FROM users WHERE id = ?", (user_id,))
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return User(**extract_row(user, "users"))
 
 
 @app.get("/users/{user_id}/enrollments")
-async def list_user_enrollments(
+def list_user_enrollments(
     user_id: int,
     status=EnrollmentStatus.ENROLLED,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
 ) -> list[Enrollment]:
     print(user_id, status)
-    rows = await fetch_rows(
+    rows = fetch_rows(
         db,
         """
         SELECT enrollments.user_id, enrollments.section_id
@@ -150,7 +150,7 @@ async def list_user_enrollments(
         ("Dropped", user_id, user_id),
     )
     rows = [extract_row(row, "enrollments") for row in rows]
-    return await database.list_enrollments(
+    return database.list_enrollments(
         db,
         [(row["user_id"], row["section_id"]) for row in rows],
     )
@@ -159,7 +159,7 @@ async def list_user_enrollments(
 #
 # @app.get("/waitlist")
 # async def list_waitlist(
-#     db: aiosqlite.Connection = Depends(get_db),
+#     db: sqlite3.Connection = Depends(get_db),
 #     user: User = Depends(authorize_user),
 # ) -> list[Waitlist]:
 #     return await fetch_rows(db, Waitlist, "SELECT * FROM waitlist")
@@ -167,7 +167,7 @@ async def list_user_enrollments(
 # @app.post("/login")
 # async def login(
 #     request: LoginRequest,
-#     db: aiosqlite.Connection = Depends(get_db),
+#     db: sqlite3.Connection = Depends(get_db),
 # ) -> LoginResponse:
 #     # Have the token live for 7 days
 #     TOKEN_AGE = 7 * 24 * 60 * 60
