@@ -63,8 +63,8 @@ def index():
 # POST
 #
 # X /users/{user_id}/{section_id}/enrollments (enroll)
-#   /courses (add course)
-#   /courses/1/sections (add section)
+# X /courses (add course)
+# X /courses/1/sections (add section)
 #
 # PATCH
 #
@@ -197,6 +197,46 @@ def create_enrollment(
         raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")
     return c
 
+@app.post("/courses")
+def add_course(
+    course: CoursePost,
+    db: sqlite3.Connection = Depends(get_db) 
+):
+    c = dict(course)
+
+    try:
+        cur = db.execute(
+            """
+                INSERT INTO courses(code, name, department_id)
+                VALUES(:code, :name, :department_id)
+            """,
+            c,
+        )
+    except Exception:
+        raise HTTPException(status_code=409, detail=f"Failed to add course:")
+    return c
+
+@app.post("/courses/{course_id}/sections")
+def add_section(
+    course_id: int,
+    section: SectionPost,
+    db: sqlite3.Connection = Depends(get_db) 
+):
+    section.course_id = course_id
+
+    s = dict(section)
+
+    try:
+        cur = db.execute(
+            """
+                INSERT INTO sections(course_id, classroom, capacity, waitlist_capacity, day, begin_time, end_time, freeze, instructor_id)
+                VALUES(:course_id, :classroom, :capacity, :waitlist_capacity, :day, :begin_time, :end_time, :freeze, :instructor_id)
+            """,
+            s,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=409, detail=f"Failed to add course:{e}")
+    return s
 #
 # @app.get("/waitlist")
 # async def list_waitlist(
