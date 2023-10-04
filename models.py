@@ -36,6 +36,7 @@ class Section(BaseModel):
     day: str
     begin_time: str
     end_time: str
+    freeze: bool
     instructor: User
 
 

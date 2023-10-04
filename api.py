@@ -62,7 +62,7 @@ def index():
 #
 # POST
 #
-#   /users/1/enrollments (enroll)
+# X /users/{user_id}/{section_id}/enrollments (enroll)
 #   /courses (add course)
 #   /courses/1/sections (add section)
 #
@@ -155,6 +155,47 @@ def list_user_enrollments(
         [(row["user_id"], row["section_id"]) for row in rows],
     )
 
+@app.post("/users/{user_id}/{section_id}/enrollments") #student attempt to enroll in class
+def create_enrollment(
+    user_id: int,
+    section_id : int,
+    enrollment: Enrollment,
+    db: sqlite3.Connection = Depends(get_db)    
+):
+    enrollment.user = user_id
+    enrollment.section = section_id
+    enrollment.status = EnrollmentStatus.ENROLLED
+    
+    c =  dict(enrollment)
+    try:
+        cur = db.execute(
+            """
+                SELECT id
+                FROM sections as s
+                WHERE s.id = :section
+                AND s.capacity > (SELECT COUNT(*) FROM enrollments WHERE section_id = :section AND status = 'Enrolled')
+                AND s.freeze = FALSE
+                
+            """,
+            c,
+                
+        )
+        if cur:
+            try:
+                cur = db.execute(
+                    """
+                        INSERT INTO enrollments (user_id, section_id, status, grade, date)
+                        VALUES(:user, :section, :status, NULL, CURRENT_TIMESTAMP)
+                    """,
+                    c,
+                )
+                
+            except Exception:
+                raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")        
+            
+    except Exception:
+        raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")
+    return c
 
 #
 # @app.get("/waitlist")
