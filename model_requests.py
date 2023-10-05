@@ -12,6 +12,12 @@ class LoginResponse(BaseModel):
     token: str
     expiry: int
 
+class EnrollmentPost(BaseModel):
+    user: int
+    section: int
+    status: str
+
+
 class CoursePost(BaseModel):
     code: str
     name: str

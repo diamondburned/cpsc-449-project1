@@ -47,7 +47,7 @@ CREATE TABLE waitlist (
     user_id INTEGER NOT NULL REFERENCES users (id),
     section_id INTEGER NOT NULL REFERENCES sections (id),
     position INTEGER NOT NULL,
-    date TEXT NOT NULL,
+    date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, section_id)
 );
 
