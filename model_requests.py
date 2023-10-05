@@ -13,10 +13,8 @@ class LoginResponse(BaseModel):
     expiry: int
 
 
-class EnrollmentPost(BaseModel):
-    user: int
+class CreateEnrollmentRequest(BaseModel):
     section: int
-    status: str
 
 
 class CoursePost(BaseModel):

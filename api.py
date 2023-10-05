@@ -159,58 +159,69 @@ def list_user_enrollments(
 @app.post("/users/{user_id}/enrollments")  # student attempt to enroll in class
 def create_enrollment(
     user_id: int,
-    enrollment: EnrollmentPost,
+    enrollment: CreateEnrollmentRequest,
     db: sqlite3.Connection = Depends(get_db),
-):
-    enrollment.user = user_id
-    enrollment.status = EnrollmentStatus.ENROLLED
+) -> Enrollment:
+    d = {
+        "user": user_id,
+        "section": enrollment.section,
+    }
 
-    c = dict(enrollment)
-    try:
+    # Verify that the class still has space.
+    cur = db.execute(
+        """
+        SELECT id
+        FROM sections as s
+        WHERE s.id = :section
+        AND s.capacity > (SELECT COUNT(*) FROM enrollments WHERE section_id = :section)
+        AND s.freeze = FALSE 
+        """,
+        d,
+    )
+    if cur:
+        # If there is space, enroll the student.
+        db.execute(
+            """
+            INSERT INTO enrollments (user_id, section_id, status, grade, date)
+            VALUES(:user, :section, 'Enrolled', NULL, CURRENT_TIMESTAMP)
+            """,
+            d,
+        )
+    else:
+        # Otherwise, try to add them to the waitlist.
         cur = db.execute(
             """
-                SELECT id
-                FROM sections as s
-                WHERE s.id = :section
-                AND s.capacity > (SELECT COUNT(*) FROM enrollments WHERE section_id = :section AND status = 'Enrolled')
-                AND s.freeze = FALSE 
+            SELECT id
+            FROM sections as s
+            WHERE s.id = :section
+            AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
+            AND s.freeze = FALSE
             """,
-            c,
+            d,
         )
         if cur:
-            cur = db.execute(
+            db.execute(
                 """
-                    INSERT INTO enrollments (user_id, section_id, status, grade, date)
-                    VALUES(:user, :section, :status, NULL, CURRENT_TIMESTAMP)
+                INSERT INTO waitlist (user_id, section_id, position, date)
+                VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
                 """,
-                c,
+                d,
             )
-    except Exception:
-        raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")
-
-    try:
-        cur = db.execute(
-            """
-                SELECT id
-                FROM sections as s
-                WHERE s.id = :section
-                AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
-                AND s.freeze = FALSE
-            """,
-            c,
-        )
-        if cur:
-            cur = db.execute(
+            db.execute(
                 """
-                    INSERT INTO waitlist (user_id, section_id, position, date)
-                    VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
+                INSERT INTO enrollments (user_id, section_id, status, grade, date)
+                VALUES(:user, :section, 'Waitlisted', NULL, CURRENT_TIMESTAMP)
                 """,
-                c,
+                d,
             )
-    except Exception:
-        raise HTTPException(status_code=409, detail=f"Failed to enroll in waitlist:")
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Section is full and waitlist is full.",
+            )
 
-    return c
+    enrollments = database.list_enrollments(db, [(d["user"], d["section"])])
+    return enrollments[0]
 
 
 @app.post("/courses")

@@ -57,7 +57,6 @@ class Waitlist(BaseModel):
     user: User
     section: Section
     position: int
-    
 
 
 class Session(BaseModel):
