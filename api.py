@@ -155,16 +155,17 @@ def list_user_enrollments(
         [(row["user_id"], row["section_id"]) for row in rows],
     )
 
-@app.post("/users/{user_id}/enrollments") #student attempt to enroll in class
+
+@app.post("/users/{user_id}/enrollments")  # student attempt to enroll in class
 def create_enrollment(
     user_id: int,
     enrollment: EnrollmentPost,
-    db: sqlite3.Connection = Depends(get_db)    
+    db: sqlite3.Connection = Depends(get_db),
 ):
     enrollment.user = user_id
     enrollment.status = EnrollmentStatus.ENROLLED
-    
-    c =  dict(enrollment)
+
+    c = dict(enrollment)
     try:
         cur = db.execute(
             """
@@ -174,7 +175,7 @@ def create_enrollment(
                 AND s.capacity > (SELECT COUNT(*) FROM enrollments WHERE section_id = :section AND status = 'Enrolled')
                 AND s.freeze = FALSE 
             """,
-            c,       
+            c,
         )
         if cur:
             cur = db.execute(
@@ -185,8 +186,8 @@ def create_enrollment(
                 c,
             )
     except Exception:
-        raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")         
-        
+        raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")
+
     try:
         cur = db.execute(
             """
@@ -205,17 +206,15 @@ def create_enrollment(
                     VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
                 """,
                 c,
-            )                    
+            )
     except Exception:
         raise HTTPException(status_code=409, detail=f"Failed to enroll in waitlist:")
 
     return c
 
+
 @app.post("/courses")
-def add_course(
-    course: CoursePost,
-    db: sqlite3.Connection = Depends(get_db) 
-):
+def add_course(course: CoursePost, db: sqlite3.Connection = Depends(get_db)):
     c = dict(course)
 
     try:
@@ -230,11 +229,10 @@ def add_course(
         raise HTTPException(status_code=409, detail=f"Failed to add course:")
     return c
 
+
 @app.post("/courses/{course_id}/sections")
 def add_section(
-    course_id: int,
-    section: SectionPost,
-    db: sqlite3.Connection = Depends(get_db) 
+    course_id: int, section: SectionPost, db: sqlite3.Connection = Depends(get_db)
 ):
     section.course_id = course_id
 
@@ -251,6 +249,8 @@ def add_section(
     except Exception as e:
         raise HTTPException(status_code=409, detail=f"Failed to add course:{e}")
     return s
+
+
 #
 # @app.get("/waitlist")
 # async def list_waitlist(

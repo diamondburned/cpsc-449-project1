@@ -12,6 +12,7 @@ class LoginResponse(BaseModel):
     token: str
     expiry: int
 
+
 class EnrollmentPost(BaseModel):
     user: int
     section: int
@@ -23,8 +24,9 @@ class CoursePost(BaseModel):
     name: str
     department_id: int
 
+
 class SectionPost(BaseModel):
-    course_id:  int
+    course_id: int
     classrooom: str
     capacity: int
     waitlist_capacity: int
@@ -33,6 +35,7 @@ class SectionPost(BaseModel):
     end_time: str
     freeze: bool
     instuctor_id: int
+
 
 class ListEnrollmentsResponse(BaseModel):
     enrollments: list[Enrollment]
