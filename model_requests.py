@@ -14,9 +14,7 @@ class LoginResponse(BaseModel):
 
 
 class CreateEnrollmentRequest(BaseModel):
-    user: int
     section: int
-    status: str
 
 
 class AddCourseRequest(BaseModel):
