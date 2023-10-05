@@ -155,15 +155,13 @@ def list_user_enrollments(
         [(row["user_id"], row["section_id"]) for row in rows],
     )
 
-@app.post("/users/{user_id}/{section_id}/enrollments") #student attempt to enroll in class
+@app.post("/users/{user_id}/enrollments") #student attempt to enroll in class
 def create_enrollment(
     user_id: int,
-    section_id : int,
-    enrollment: Enrollment,
+    enrollment: EnrollmentPost,
     db: sqlite3.Connection = Depends(get_db)    
 ):
     enrollment.user = user_id
-    enrollment.section = section_id
     enrollment.status = EnrollmentStatus.ENROLLED
     
     c =  dict(enrollment)
@@ -174,27 +172,43 @@ def create_enrollment(
                 FROM sections as s
                 WHERE s.id = :section
                 AND s.capacity > (SELECT COUNT(*) FROM enrollments WHERE section_id = :section AND status = 'Enrolled')
-                AND s.freeze = FALSE
-                
+                AND s.freeze = FALSE 
             """,
-            c,
-                
+            c,       
         )
         if cur:
-            try:
-                cur = db.execute(
-                    """
-                        INSERT INTO enrollments (user_id, section_id, status, grade, date)
-                        VALUES(:user, :section, :status, NULL, CURRENT_TIMESTAMP)
-                    """,
-                    c,
-                )
-                
-            except Exception:
-                raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")        
-            
+            cur = db.execute(
+                """
+                    INSERT INTO enrollments (user_id, section_id, status, grade, date)
+                    VALUES(:user, :section, :status, NULL, CURRENT_TIMESTAMP)
+                """,
+                c,
+            )
     except Exception:
-        raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")
+        raise HTTPException(status_code=409, detail=f"Failed to enroll in section:")         
+        
+    try:
+        cur = db.execute(
+            """
+                SELECT id
+                FROM sections as s
+                WHERE s.id = :section
+                AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
+                AND s.freeze = FALSE
+            """,
+            c,
+        )
+        if cur:
+            cur = db.execute(
+                """
+                    INSERT INTO waitlist (user_id, section_id, position, date)
+                    VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
+                """,
+                c,
+            )                    
+    except Exception:
+        raise HTTPException(status_code=409, detail=f"Failed to enroll in waitlist:")
+
     return c
 
 @app.post("/courses")
