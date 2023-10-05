@@ -13,10 +13,9 @@ class LoginResponse(BaseModel):
     expiry: int
 
 
-class CreateEnrollmentRequest(BaseModel):
+class EnrollmentPost(BaseModel):
     user: int
     section: int
-    status: str
 
 
 class AddCourseRequest(BaseModel):
@@ -25,9 +24,9 @@ class AddCourseRequest(BaseModel):
     department_id: int
 
 
-class AddSectionRequest(BaseModel):
+class SectionPost(BaseModel):
     course_id: int
-    classroom: str
+    classrooom: str
     capacity: int
     waitlist_capacity: int
     day: str

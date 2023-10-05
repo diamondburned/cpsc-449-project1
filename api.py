@@ -158,9 +158,7 @@ def list_user_enrollments(
 
 @app.post("/users/{user_id}/enrollments")  # student attempt to enroll in class
 def create_enrollment(
-    user_id: int,
-    enrollment: CreateEnrollmentRequest,
-    db: sqlite3.Connection = Depends(get_db),
+    user_id: int, enrollment: EnrollmentPost, db: sqlite3.Connection = Depends(get_db)
 ):
     enrollment.user = user_id
     enrollment.status = EnrollmentStatus.ENROLLED
@@ -191,30 +189,28 @@ def create_enrollment(
     try:
         cur = db.execute(
             """
-                SELECT id
-                FROM sections as s
-                WHERE s.id = :section
-                AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
-                AND s.freeze = FALSE
+            SELECT id
+            FROM sections as s
+            WHERE s.id = :section
+            AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
+            AND s.freeze = FALSE
             """,
-            c,
+            d,
         )
         if cur:
-            cur = db.execute(
+            db.execute(
                 """
-                    INSERT INTO waitlist (user_id, section_id, position, date)
-                    VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
+                INSERT INTO waitlist (user_id, section_id, position, date)
+                VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
                 """,
                 c,
             )
     except Exception:
         raise HTTPException(status_code=409, detail=f"Failed to enroll in waitlist:")
 
-    return c
-
 
 @app.post("/courses")
-def add_course(course: AddCourseRequest, db: sqlite3.Connection = Depends(get_db)):
+def add_course(course: CoursePost, db: sqlite3.Connection = Depends(get_db)):
     c = dict(course)
 
     try:
@@ -232,7 +228,7 @@ def add_course(course: AddCourseRequest, db: sqlite3.Connection = Depends(get_db
 
 @app.post("/courses/{course_id}/sections")
 def add_section(
-    course_id: int, section: AddSectionRequest, db: sqlite3.Connection = Depends(get_db)
+    course_id: int, section: SectionPost, db: sqlite3.Connection = Depends(get_db)
 ):
     section.course_id = course_id
 
