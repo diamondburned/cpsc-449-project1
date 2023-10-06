@@ -78,7 +78,13 @@ def index():
 #
 # DELETE
 #
-#   /sections/1
+#   /users/{user_id}/enrollments/{section_id} (drop enrollment)
+#   /users/{user_id}/waitlist/{section_id} (drop waitlist)
+#   /sections/{section_id}/enrollments/{user_id}
+#     (drop enrollment,
+#      instructor only,
+#      just call /users' method though)
+#   /sections/{section_id} (remove section, registrar only)
 
 
 @app.get("/courses")
