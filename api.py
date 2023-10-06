@@ -68,7 +68,7 @@ def index():
 #
 # POST
 #
-# X /users/{user_id}/{section_id}/enrollments (enroll)
+# X /users/{user_id}/enrollments (enroll)
 # X /courses (add course)
 # X /courses/1/sections (add section)
 #
