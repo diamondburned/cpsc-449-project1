@@ -56,9 +56,14 @@ def index():
 # X /courses
 # X /courses/1
 # X /courses/1/sections
+# X /courses/1/sections/1
+# X /courses/1/sections/1/enrollments
+# X /courses/1/sections/1/waitlist
+# X /courses/1/waitlist
 # X /users
 # X /users/1/enrollments (all enrolled or instructing courses)
-# X /users/1/enrollments?status=Dropped (all dropped classes)
+# X /users/1/enrollments?status=Dropped
+# X /users/1/waitlist
 #
 # POST
 #
