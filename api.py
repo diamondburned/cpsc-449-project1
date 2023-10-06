@@ -70,15 +70,15 @@ def index():
 #
 # X /users/{user_id}/enrollments (enroll)
 # X /courses (add course)
-# X /courses/1/sections (add section)
+# X /sections (add section)
 #
 # PATCH
 #
-#   /courses/1/sections/2 (change section, registrar only)
+#   /sections/2 (change section, registrar only)
 #
 # DELETE
 #
-#   /courses/1/sections/1
+#   /sections/1
 
 
 @app.get("/courses")
