@@ -279,17 +279,17 @@ def list_user_waitlist(
         """
         SELECT waitlist.user_id, waitlist.section_id
         FROM waitlist
+        INNER JOIN sections ON sections.id = waitlist.section_id
         WHERE
-            status = 'Waitlisted'
-            AND deleted = FALSE
-            AND (user_id = ? OR instructor_id = ?)
+            sections.deleted = FALSE
+            AND (user_id = :user_id OR instructor_id = :user_id)
         """,
-        (user_id,),
+        {"user_id": user_id},
     )
     rows = [extract_row(row, "waitlist") for row in section_ids]
     return database.list_waitlist(
         db,
-        [(row["waitlist.user_id"], row["waitlist.section_id"]) for row in rows],
+        [(row["user_id"], row["section_id"]) for row in rows],
     )
 
 
