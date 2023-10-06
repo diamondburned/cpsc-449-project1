@@ -86,10 +86,10 @@ INSERT INTO courses VALUES
 (2, 'MATH 150A', 'Calculus I', 3);
 
 INSERT INTO sections VALUES
-(1, 1, 'CS102', 30, 15, 'Tuesday', '7pm', '9:45pm', FALSE, 2),
-(2, 1, 'CS104', 30, 15, 'Wednesday', '4pm', '6:45pm', FALSE, 2),
-(3, 2, 'MH302', 35, 15, 'Monday', '12pm', '2:45pm', FALSE, 4),
-(4, 2, 'MH107', 32, 15, 'Thursday', '9am', '11:30am', FALSE, 4);
+(1, 1, 'CS102', 30, 15, 'Tuesday', '7pm', '9:45pm', 2, 0, 0),
+(2, 1, 'CS104', 30, 15, 'Wednesday', '4pm', '6:45pm', 2, 0, 0),
+(3, 2, 'MH302', 35, 15, 'Monday', '12pm', '2:45pm', 4, 0, 0),
+(4, 2, 'MH107', 32, 15, 'Thursday', '9am', '11:30am', 4, 0, 0);
 
 INSERT INTO enrollments VALUES
 (5, 1, 'Enrolled', 'A', '2023-09-15'),
