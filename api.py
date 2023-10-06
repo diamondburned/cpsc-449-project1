@@ -166,7 +166,7 @@ def list_section_enrollments(
             AND sections.deleted = FALSE
             AND sections.id = ?
         """,
-        ("Dropped", section_id),
+        (status, section_id),
     )
     rows = [extract_row(row, "enrollments") for row in rows]
     return database.list_enrollments(
