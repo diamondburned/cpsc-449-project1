@@ -17,6 +17,10 @@ class CreateEnrollmentRequest(BaseModel):
     section: int
 
 
+class CreateEnrollmentResponse(Enrollment):
+    waitlist_position: int | None
+
+
 class AddCourseRequest(BaseModel):
     code: str
     name: str

@@ -144,6 +144,45 @@ def list_courses(
     ]
 
 
+def list_sections(
+    db: sqlite3.Connection,
+    section_ids: list[int] | None = None,
+) -> list[Section]:
+    rows = fetch_rows(
+        db,
+        """
+        SELECT
+            sections.*,
+            courses.*,
+            departments.*,
+            instructors.*
+        FROM sections
+        INNER JOIN courses ON courses.id = sections.course_id
+        INNER JOIN departments ON departments.id = courses.department_id
+        INNER JOIN users AS instructors ON instructors.id = sections.instructor_id
+        """
+        + (
+            "WHERE sections.id IN (%s)" % ",".join(["?"] * len(section_ids))
+            if section_ids is not None
+            else ""
+        ),
+        section_ids,
+    )
+    return [
+        Section(
+            **extract_row(row, "sections"),
+            course=Course(
+                **extract_row(row, "courses"),
+                department=Department(
+                    **extract_row(row, "departments"),
+                ),
+            ),
+            instructor=User(**extract_row(row, "instructors")),
+        )
+        for row in rows
+    ]
+
+
 def list_enrollments(
     db: sqlite3.Connection,
     user_section_ids: list[tuple[int, int]] | None = None,
@@ -190,40 +229,47 @@ def list_enrollments(
     ]
 
 
-def list_sections(
+def list_waitlist(
     db: sqlite3.Connection,
-    section_ids: list[int] | None = None,
-) -> list[Section]:
-    rows = fetch_rows(
-        db,
-        """
+    user_section_ids: list[tuple[int, int]] | None = None,
+) -> list[Waitlist]:
+    q = """
         SELECT
+            waitlist.*,
             sections.*,
             courses.*,
             departments.*,
+            users.*,
             instructors.*
-        FROM sections
+        FROM waitlist
+        INNER JOIN users ON users.id = waitlist.user_id
+        INNER JOIN sections ON sections.id = waitlist.section_id
         INNER JOIN courses ON courses.id = sections.course_id
         INNER JOIN departments ON departments.id = courses.department_id
         INNER JOIN users AS instructors ON instructors.id = sections.instructor_id
-        """
-        + (
-            "WHERE sections.id IN (%s)" % ",".join(["?"] * len(section_ids))
-            if section_ids is not None
-            else ""
-        ),
-        section_ids,
-    )
+    """
+    p = []
+    if user_section_ids is not None:
+        q += "WHERE (users.id, sections.id) IN (%s)" % ",".join(
+            ["(?, ?)"] * len(user_section_ids)
+        )
+        p = [item for sublist in user_section_ids for item in sublist]  # flatten list
+
+    rows = fetch_rows(db, q, p)
     return [
-        Section(
-            **extract_row(row, "sections"),
-            course=Course(
-                **extract_row(row, "courses"),
-                department=Department(
-                    **extract_row(row, "departments"),
+        Waitlist(
+            **extract_row(row, "waitlist"),
+            user=User(**extract_row(row, "users")),
+            section=Section(
+                **extract_row(row, "sections"),
+                course=Course(
+                    **extract_row(row, "courses"),
+                    department=Department(
+                        **extract_row(row, "departments"),
+                    ),
                 ),
+                instructor=User(**extract_row(row, "instructors")),
             ),
-            instructor=User(**extract_row(row, "instructors")),
         )
         for row in rows
     ]

@@ -93,6 +93,28 @@ def get_course(
     return courses[0]
 
 
+@app.get("/courses/{course_id}/waitlist")
+def get_course_waitlist(
+    course_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+) -> list[Waitlist]:
+    section_ids = fetch_rows(
+        db,
+        """
+        SELECT waitlist.user_id, sections.id
+        FROM waitlist
+        INNER JOIN sections ON waitlist.section_id = sections.id
+        WHERE waitlist.course_id = ? AND sections.deleted = FALSE
+        """,
+        (course_id,),
+    )
+    rows = [extract_row(row, "waitlist") for row in section_ids]
+    return database.list_waitlist(
+        db,
+        [(row["waitlist.user_id"], row["sections.id"]) for row in rows],
+    )
+
+
 @app.get("/courses/{course_id}/sections")
 def list_course_sections(
     course_id: int,
@@ -108,6 +130,71 @@ def list_course_sections(
         (course_id,),
     )
     return database.list_sections(db, [row["sections.id"] for row in section_ids])
+
+
+@app.get("/courses/{course_id}/sections/{section_id}")
+def get_course_section(
+    course_id: int,
+    section_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Section:
+    sections = database.list_sections(db, [section_id])
+    if len(sections) == 0:
+        raise HTTPException(status_code=404, detail="Section not found")
+    return sections[0]
+
+
+@app.get("/courses/{course_id}/sections/{section_id}/enrollments")
+def list_section_enrollments(
+    course_id: int,
+    section_id: int,
+    status=EnrollmentStatus.ENROLLED,
+    db: sqlite3.Connection = Depends(get_db),
+) -> list[Enrollment]:
+    rows = fetch_rows(
+        db,
+        """
+        SELECT enrollments.user_id, enrollments.section_id
+        FROM enrollments
+        INNER JOIN sections ON sections.id = enrollments.section_id
+        WHERE
+            enrollments.status = ?
+            AND sections.deleted = FALSE
+            AND sections.id = ?
+        """,
+        ("Dropped", section_id),
+    )
+    rows = [extract_row(row, "enrollments") for row in rows]
+    return database.list_enrollments(
+        db,
+        [(row["user_id"], row["section_id"]) for row in rows],
+    )
+
+
+@app.get("/courses/{course_id}/sections/{section_id}/waitlist")
+def list_section_waitlist(
+    course_id: int,
+    section_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+) -> list[Waitlist]:
+    rows = fetch_rows(
+        db,
+        """
+        SELECT waitlist.user_id, waitlist.section_id
+        FROM waitlist
+        INNER JOIN sections ON sections.id = waitlist.section_id
+        WHERE
+            waitlist.course_id = ?
+            AND sections.deleted = FALSE
+            AND sections.id = ?
+        """,
+        (course_id, section_id),
+    )
+    rows = [extract_row(row, "waitlist") for row in rows]
+    return database.list_waitlist(
+        db,
+        [(row["user_id"], row["section_id"]) for row in rows],
+    )
 
 
 @app.get("/users")
@@ -155,19 +242,46 @@ def list_user_enrollments(
     )
 
 
+@app.get("/users/{user_id}/waitlist")
+def list_user_waitlist(
+    user_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+) -> list[Waitlist]:
+    section_ids = fetch_rows(
+        db,
+        """
+        SELECT waitlist.user_id, waitlist.section_id
+        FROM waitlist
+        WHERE
+            status = 'Waitlisted'
+            AND deleted = FALSE
+            AND (user_id = ? OR instructor_id = ?)
+        """,
+        (user_id,),
+    )
+    rows = [extract_row(row, "waitlist") for row in section_ids]
+    return database.list_waitlist(
+        db,
+        [(row["waitlist.user_id"], row["waitlist.section_id"]) for row in rows],
+    )
+
+
 @app.post("/users/{user_id}/enrollments")  # student attempt to enroll in class
 def create_enrollment(
     user_id: int,
     enrollment: CreateEnrollmentRequest,
     db: sqlite3.Connection = Depends(get_db),
-) -> Enrollment:
+) -> CreateEnrollmentResponse:
     d = {
         "user": user_id,
         "section": enrollment.section,
     }
 
+    waitlist_position = None
+
     # Verify that the class still has space.
-    cur = db.execute(
+    id = fetch_row(
+        db,
         """
         SELECT id
         FROM sections as s
@@ -178,7 +292,7 @@ def create_enrollment(
         """,
         d,
     )
-    if cur:
+    if id:
         # If there is space, enroll the student.
         db.execute(
             """
@@ -189,25 +303,35 @@ def create_enrollment(
         )
     else:
         # Otherwise, try to add them to the waitlist.
-        cur = db.execute(
+        id = fetch_row(
+            db,
             """
             SELECT id
             FROM sections as s
             WHERE s.id = :section
             AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
+            AND (SELECT COUNT(*) FROM waitlist WHERE user_id = :user) < 3
             AND s.freeze = FALSE
             AND s.deleted = FALSE
             """,
             d,
         )
-        if cur:
-            db.execute(
+        if id:
+            row = fetch_row(
+                db,
                 """
                 INSERT INTO waitlist (user_id, section_id, position, date)
-                VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)+1, CURRENT_TIMESTAMP)
+                VALUES(:user, :section, (SELECT COUNT(*) FROM waitlist WHERE section_id = :section), CURRENT_TIMESTAMP)
+                RETURNING position
                 """,
                 d,
             )
+
+            # Read back the waitlist position.
+            assert row
+            waitlist_position = row["waitlist.position"]
+
+            # Ensure that there's also a waitlist enrollment.
             db.execute(
                 """
                 INSERT INTO enrollments (user_id, section_id, status, grade, date)
@@ -222,7 +346,10 @@ def create_enrollment(
             )
 
     enrollments = database.list_enrollments(db, [(d["user"], d["section"])])
-    return enrollments[0]
+    return CreateEnrollmentResponse(
+        **dict(enrollments[0]),
+        waitlist_position=waitlist_position,
+    )
 
 
 @app.post("/courses")
