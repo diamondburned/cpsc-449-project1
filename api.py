@@ -20,21 +20,6 @@ from model_requests import *
 app = FastAPI()
 
 
-@app.get("/", response_class=HTMLResponse)
-def index():
-    html_content = """
-    <html>
-        <head>
-            <title>FastAPI</title>
-        </head>
-        <body>
-            <h1>Homepage:</h1>
-        </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
-
-
 # The API should allow students to:
 #  - List available classes (/courses)
 #  - Attempt to enroll in a class
