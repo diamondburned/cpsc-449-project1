@@ -30,8 +30,9 @@ CREATE TABLE sections (
     day TEXT NOT NULL,
     begin_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
+    instructor_id INTEGER NOT NULL REFERENCES users (id),
     freeze BOOLEAN NOT NULL DEFAULT FALSE,
-    instructor_id INTEGER NOT NULL REFERENCES users (id)
+    deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE enrollments (

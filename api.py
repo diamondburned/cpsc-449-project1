@@ -72,7 +72,6 @@ def index():
 #
 # DELETE
 #
-#   /courses/1
 #   /courses/1/sections/1
 
 
