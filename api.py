@@ -280,6 +280,13 @@ def update_section(
         if value is not None:
             q += f"{key} = :{key}, "
             v[key] = value
+
+    if len(v) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No fields provided to update.",
+        )
+
     q = q[:-2]  # remove trailing comma
 
     q += """
