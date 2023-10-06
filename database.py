@@ -88,33 +88,6 @@ def exclude_dict(d: dict, keys: Iterable[str]) -> dict:
     return {k: v for k, v in d.items() if k not in keys}
 
 
-def authorize(
-    db: sqlite3.Connection = Depends(get_db),
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
-) -> Session:
-    cursor = db.execute(
-        """
-        SELECT
-            users.*,
-            sessions.*
-        FROM sessions
-        INNER JOIN users ON sessions.user_id = users.id
-        WHERE token = ? AND expiry > ?
-        """,
-        (credentials.credentials, int(time.time())),
-    )
-    row = cursor.fetchone()
-    cursor.close()
-
-    if row is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    return Session(
-        **extract_row(row, "sessions"),
-        user=User(**extract_row(row, "users")),
-    )
-
-
 def list_courses(
     db: sqlite3.Connection,
     course_ids: list[int] | None = None,
