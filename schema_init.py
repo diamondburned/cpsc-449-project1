@@ -15,6 +15,9 @@ args = parser.parse_args()
 schema_sql_file = open(args.input, "r")
 schema_sql = schema_sql_file.read()
 
+schema_testdata_sql_file = open(args.input.replace(".sql", "_testdata.sql"), "r")
+schema_testdata_sql = schema_testdata_sql_file.read()
+
 if os.path.isfile(args.file):
     answer = input("Database file already exists. Overwrite? (y/n) ")
     if answer.lower() == "y":
@@ -27,6 +30,10 @@ conn = sqlite3.connect(args.file)
 
 c = conn.cursor()
 c.executescript(schema_sql)
+
+insertTestData = input("Insert test data? (y/n) ")
+if insertTestData.lower() == "y":
+    c.executescript(schema_testdata_sql)
 
 conn.commit()
 conn.close()
