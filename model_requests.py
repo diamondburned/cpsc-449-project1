@@ -2,17 +2,6 @@ from pydantic import BaseModel
 from models import *
 
 
-class LoginRequest(BaseModel):
-    first_name: str
-    last_name: str
-
-
-class LoginResponse(BaseModel):
-    user: User
-    token: str
-    expiry: int
-
-
 class ListUserSectionsType(str, Enum):
     ALL = "all"
     ENROLLED = "enrolled"

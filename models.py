@@ -57,10 +57,3 @@ class Waitlist(BaseModel):
     user: User
     section: Section
     position: int
-
-
-class Session(BaseModel):
-    id: int
-    user: User
-    token: str
-    expiry: int  # unix timestamp
