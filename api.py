@@ -103,7 +103,7 @@ def list_course_sections(
         """
         SELECT id
         FROM sections
-        WHERE course_id = ?
+        WHERE course_id = ? AND deleted = FALSE
         """,
         (course_id,),
     )
@@ -144,6 +144,7 @@ def list_user_enrollments(
         INNER JOIN sections ON sections.id = enrollments.section_id
         WHERE
             enrollments.status = ?
+            AND sections.deleted = FALSE
             AND (enrollments.user_id = ? OR sections.instructor_id = ?)
         """,
         ("Dropped", user_id, user_id),
@@ -173,7 +174,8 @@ def create_enrollment(
         FROM sections as s
         WHERE s.id = :section
         AND s.capacity > (SELECT COUNT(*) FROM enrollments WHERE section_id = :section)
-        AND s.freeze = FALSE 
+        AND s.freeze = FALSE
+        AND s.deleted = FALSE
         """,
         d,
     )
@@ -195,6 +197,7 @@ def create_enrollment(
             WHERE s.id = :section
             AND s.waitlist_capacity > (SELECT COUNT(*) FROM waitlist WHERE section_id = :section)
             AND s.freeze = FALSE
+            AND s.deleted = FALSE
             """,
             d,
         )
