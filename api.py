@@ -5,6 +5,7 @@ import secrets
 import base64
 import time
 import sqlite3
+from typing import Optional
 import database
 
 from fastapi.responses import HTMLResponse
@@ -55,10 +56,10 @@ def index():
 #
 # X /courses
 # X /courses/1
-# X /courses/1/sections
-# X /courses/1/sections/1
-# X /courses/1/sections/1/enrollments
-# X /courses/1/sections/1/waitlist
+# X /sections
+# X /sections/1
+# X /sections/1/enrollments
+# X /sections/1/waitlist
 # X /courses/1/waitlist
 # X /users
 # X /users/1/enrollments
@@ -120,9 +121,9 @@ def get_course_waitlist(
     )
 
 
-@app.get("/courses/{course_id}/sections")
-def list_course_sections(
-    course_id: int,
+@app.get("/sections")
+def list_sections(
+    course_id: Optional[int] = None,
     db: sqlite3.Connection = Depends(get_db),
 ) -> list[Section]:
     section_ids = fetch_rows(
@@ -130,16 +131,16 @@ def list_course_sections(
         """
         SELECT id
         FROM sections
-        WHERE course_id = ? AND deleted = FALSE
-        """,
-        (course_id,),
+        WHERE deleted = FALSE
+        """
+        + ("" if course_id is None else "AND course_id = :course_id"),
+        {"course_id": course_id},
     )
     return database.list_sections(db, [row["sections.id"] for row in section_ids])
 
 
-@app.get("/courses/{course_id}/sections/{section_id}")
-def get_course_section(
-    course_id: int,
+@app.get("/sections/{section_id}")
+def get_section(
     section_id: int,
     db: sqlite3.Connection = Depends(get_db),
 ) -> Section:
@@ -149,9 +150,8 @@ def get_course_section(
     return sections[0]
 
 
-@app.get("/courses/{course_id}/sections/{section_id}/enrollments")
+@app.get("/sections/{section_id}/enrollments")
 def list_section_enrollments(
-    course_id: int,
     section_id: int,
     status=EnrollmentStatus.ENROLLED,
     db: sqlite3.Connection = Depends(get_db),
@@ -176,9 +176,8 @@ def list_section_enrollments(
     )
 
 
-@app.get("/courses/{course_id}/sections/{section_id}/waitlist")
+@app.get("/sections/{section_id}/waitlist")
 def list_section_waitlist(
-    course_id: int,
     section_id: int,
     db: sqlite3.Connection = Depends(get_db),
 ) -> list[Waitlist]:
@@ -188,12 +187,9 @@ def list_section_waitlist(
         SELECT waitlist.user_id, waitlist.section_id
         FROM waitlist
         INNER JOIN sections ON sections.id = waitlist.section_id
-        WHERE
-            waitlist.course_id = ?
-            AND sections.deleted = FALSE
-            AND sections.id = ?
+        WHERE waitlist.section_id = ? AND sections.deleted = FALSE
         """,
-        (course_id, section_id),
+        (section_id),
     )
     rows = [extract_row(row, "waitlist") for row in rows]
     return database.list_waitlist(
@@ -400,33 +396,28 @@ def add_course(course: AddCourseRequest, db: sqlite3.Connection = Depends(get_db
     return c
 
 
-@app.post("/courses/{course_id}/sections")
+@app.post("/sections")
 def add_section(
-    course_id: int,
     section: AddSectionRequest,
     db: sqlite3.Connection = Depends(get_db),
 ) -> Section:
-    s = dict(section)
-    s["course_id"] = course_id
-
     try:
         cur = db.execute(
             """
                 INSERT INTO sections(course_id, classroom, capacity, waitlist_capacity, day, begin_time, end_time, freeze, instructor_id)
                 VALUES(:course_id, :classroom, :capacity, :waitlist_capacity, :day, :begin_time, :end_time, :freeze, :instructor_id)
             """,
-            s,
+            dict(section),
         )
     except Exception as e:
-        raise HTTPException(status_code=409, detail=f"Failed to add course:{e}")
+        raise HTTPException(status_code=409, detail=f"Failed to add course: {e}")
 
-    sections = database.list_sections(db, [s["course_id"]])
+    sections = database.list_sections(db, [section.course_id])
     return sections[0]
 
 
-@app.patch("/courses/{course_id}/sections/{section_id}")
+@app.patch("/sections/{section_id}")
 def update_section(
-    course_id: int,
     section_id: int,
     section: UpdateSectionRequest,
     db: sqlite3.Connection = Depends(get_db),
@@ -450,10 +441,9 @@ def update_section(
     q = q[:-2]  # remove trailing comma
 
     q += """
-    WHERE id = :section_id AND course_id = :course_id
+    WHERE id = :section_id
     """
     v["section_id"] = section_id
-    v["course_id"] = course_id
 
     try:
         db.execute(q, v)

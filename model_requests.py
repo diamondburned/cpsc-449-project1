@@ -34,13 +34,14 @@ class AddCourseRequest(BaseModel):
 
 
 class AddSectionRequest(BaseModel):
+    course_id: int
     classroom: str
     capacity: int
     waitlist_capacity: int = 15
     day: str
     begin_time: str
     end_time: str
-    freeze: bool
+    freeze: bool = False
     instructor_id: int
 
 
