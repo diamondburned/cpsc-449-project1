@@ -24,7 +24,6 @@ class AddCourseRequest(BaseModel):
 
 
 class AddSectionRequest(BaseModel):
-    course_id: int
     classroom: str
     capacity: int
     waitlist_capacity: int = 15

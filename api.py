@@ -135,7 +135,6 @@ def list_user_enrollments(
     status=EnrollmentStatus.ENROLLED,
     db: sqlite3.Connection = Depends(get_db),
 ) -> list[Enrollment]:
-    print(user_id, status)
     rows = fetch_rows(
         db,
         """
@@ -245,11 +244,12 @@ def add_course(course: AddCourseRequest, db: sqlite3.Connection = Depends(get_db
 
 @app.post("/courses/{course_id}/sections")
 def add_section(
-    course_id: int, section: AddSectionRequest, db: sqlite3.Connection = Depends(get_db)
-):
-    section.course_id = course_id
-
+    course_id: int,
+    section: AddSectionRequest,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Section:
     s = dict(section)
+    s["course_id"] = course_id
 
     try:
         cur = db.execute(
@@ -261,7 +261,9 @@ def add_section(
         )
     except Exception as e:
         raise HTTPException(status_code=409, detail=f"Failed to add course:{e}")
-    return s
+
+    sections = database.list_sections(db, [s["course_id"]])
+    return sections[0]
 
 
 @app.patch("/courses/{course_id}/sections/{section_id}")
