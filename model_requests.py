@@ -13,6 +13,12 @@ class LoginResponse(BaseModel):
     expiry: int
 
 
+class ListUserSectionsType(str, Enum):
+    ALL = "all"
+    ENROLLED = "enrolled"
+    INSTRUCTING = "instructing"
+
+
 class CreateEnrollmentRequest(BaseModel):
     section: int
 

@@ -61,8 +61,8 @@ def index():
 # X /courses/1/sections/1/waitlist
 # X /courses/1/waitlist
 # X /users
-# X /users/1/enrollments (all enrolled or instructing courses)
-# X /users/1/enrollments?status=Dropped
+# X /users/1/enrollments
+# X /users/1/sections
 # X /users/1/waitlist
 #
 # POST
@@ -236,7 +236,7 @@ def list_user_enrollments(
         WHERE
             enrollments.status = ?
             AND sections.deleted = FALSE
-            AND (enrollments.user_id = ? OR sections.instructor_id = ?)
+            AND enrollments.user_id = ?
         """,
         ("Dropped", user_id, user_id),
     )
@@ -245,6 +245,32 @@ def list_user_enrollments(
         db,
         [(row["user_id"], row["section_id"]) for row in rows],
     )
+
+
+@app.get("/users/{user_id}/sections")
+def list_user_sections(
+    user_id: int,
+    type: ListUserSectionsType = ListUserSectionsType.ALL,
+    db: sqlite3.Connection = Depends(get_db),
+) -> list[Section]:
+    q = """
+        SELECT sections.id
+        FROM sections
+        INNER JOIN enrollments ON enrollments.section_id = sections.id
+        WHERE sections.deleted = FALSE AND
+    """
+
+    wheres = []
+    q += "("
+    if type == ListUserSectionsType.ALL or type == ListUserSectionsType.ENROLLED:
+        wheres.append("enrollments.user_id = :user_id")
+    if type == ListUserSectionsType.ALL or type == ListUserSectionsType.INSTRUCTING:
+        wheres.append("sections.instructor_id = :user_id")
+    q += " OR ".join(wheres)
+    q += ")"
+
+    rows = fetch_rows(db, q, {"user_id": user_id})
+    return database.list_sections(db, [row["sections.id"] for row in rows])
 
 
 @app.get("/users/{user_id}/waitlist")
