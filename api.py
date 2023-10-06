@@ -264,6 +264,38 @@ def add_section(
     return s
 
 
+@app.patch("/courses/{course_id}/sections/{section_id}")
+def update_section(
+    course_id: int,
+    section_id: int,
+    section: UpdateSectionRequest,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Section:
+    q = """
+    UPDATE sections
+    SET
+    """
+    v = {}
+    for key, value in section.dict().items():
+        q += f"{key} = :{key}, "
+        v[key] = value
+    q = q[:-2]  # remove trailing comma
+
+    q += """
+    WHERE id = :section_id AND course_id = :course_id
+    """
+    v["section_id"] = section_id
+    v["course_id"] = course_id
+
+    try:
+        db.execute(q, v)
+    except Exception as e:
+        raise HTTPException(status_code=409, detail=f"Failed to update section:{e}")
+
+    sections = database.list_sections(db, [section_id])
+    return sections[0]
+
+
 #
 # @app.get("/waitlist")
 # async def list_waitlist(
