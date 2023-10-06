@@ -277,8 +277,9 @@ def update_section(
     """
     v = {}
     for key, value in section.dict().items():
-        q += f"{key} = :{key}, "
-        v[key] = value
+        if value is not None:
+            q += f"{key} = :{key}, "
+            v[key] = value
     q = q[:-2]  # remove trailing comma
 
     q += """
