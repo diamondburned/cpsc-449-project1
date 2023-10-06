@@ -1,7 +1,7 @@
 import contextlib
 import sqlite3
 import time
-from typing import Generator, Iterable, Type
+from typing import Any, Generator, Iterable, Type
 from models import *
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -46,9 +46,9 @@ def get_db() -> Generator[sqlite3.Connection, None, None]:
 def fetch_rows(
     db: sqlite3.Connection,
     sql: str,
-    params=(),
+    params: Any = None,
 ) -> list[sqlite3.Row]:
-    cursor = db.execute(sql, params)
+    cursor = db.execute(sql, params if params is not None else ())
     rows = cursor.fetchall()
     cursor.close()
     return [row for row in rows]
@@ -57,9 +57,9 @@ def fetch_rows(
 def fetch_row(
     db: sqlite3.Connection,
     sql: str,
-    params=(),
+    params: Any = None,
 ) -> sqlite3.Row | None:
-    cursor = db.execute(sql, params)
+    cursor = db.execute(sql, params if params is not None else ())
     row = cursor.fetchone()
     cursor.close()
     return row
