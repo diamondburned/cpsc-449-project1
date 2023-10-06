@@ -104,17 +104,16 @@ def get_course_waitlist(
     course_id: int,
     db: sqlite3.Connection = Depends(get_db),
 ) -> list[Waitlist]:
-    section_ids = fetch_rows(
+    rows = fetch_rows(
         db,
         """
         SELECT waitlist.user_id, sections.id
         FROM waitlist
         INNER JOIN sections ON waitlist.section_id = sections.id
-        WHERE waitlist.course_id = ? AND sections.deleted = FALSE
+        WHERE sections.course_id = ? AND sections.deleted = FALSE
         """,
         (course_id,),
     )
-    rows = [extract_row(row, "waitlist") for row in section_ids]
     return database.list_waitlist(
         db,
         [(row["waitlist.user_id"], row["sections.id"]) for row in rows],
