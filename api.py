@@ -63,13 +63,13 @@ app = FastAPI()
 #
 # DELETE
 #
-#   /users/{user_id}/enrollments/{section_id} (drop enrollment)
-#   /users/{user_id}/waitlist/{section_id} (drop waitlist)
-#   /sections/{section_id}/enrollments/{user_id}
+#   X /users/{user_id}/enrollments/{section_id} (drop enrollment)
+#   X /users/{user_id}/waitlist/{section_id} (drop waitlist)
+#   X /sections/{section_id}/enrollments/{user_id}
 #     (drop enrollment,
 #      instructor only,
 #      just call /users' method though)
-#   /sections/{section_id} (remove section, registrar only)
+#   X /sections/{section_id} (remove section, registrar only)
 
 
 @app.get("/courses")
@@ -459,6 +459,7 @@ def drop_user_enrollment(
             AND section_id = :section_id
             AND status = 'Enrolled'
         """,
+        {"user_id": user_id, "section_id": section_id}
     )
 
     enrollments = database.list_enrollments(db, [(user_id, section_id)])
@@ -524,3 +525,48 @@ def drop_section_enrollment(
 ) -> Enrollment:
     # No auth so these two methods behave virtually identically.
     return drop_user_enrollment(user_id, section_id, db)
+
+@app.delete("/sections/{section_id}")
+def delete_section(
+    section_id: int,
+    db: sqlite3.Connection = Depends(get_db)
+):
+    # check validity of section_id
+    get_section(section_id, db)
+    
+    # mark section as deleted
+    db.execute(
+        """
+        UPDATE sections
+        SET deleted = TRUE
+        WHERE id = :section_id
+        """,
+        {"section_id": section_id}
+    )
+    
+    # drop enrolled users
+    ue = fetch_rows(
+        db,
+        f"""
+        SELECT user_id FROM enrollments
+        WHERE 
+            section_id = :section_id
+        """,
+        { "section_id": section_id }
+    )
+    for u in ue:
+        print(u)
+        drop_user_enrollment(u[0], section_id, db)
+    
+    # drop waitlisted users
+    uw = fetch_rows(
+        db,
+        f"""
+        SELECT user_id FROM waitlist
+        WHERE 
+            section_id = :section_id
+        """,
+        { "section_id": section_id }
+    )
+    for u in uw:
+        drop_user_waitlist(u[0], section_id, db)
