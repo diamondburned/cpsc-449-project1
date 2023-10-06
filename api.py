@@ -188,7 +188,7 @@ def list_section_waitlist(
         INNER JOIN sections ON sections.id = waitlist.section_id
         WHERE waitlist.section_id = ? AND sections.deleted = FALSE
         """,
-        (section_id),
+        (section_id,),
     )
     rows = [extract_row(row, "waitlist") for row in rows]
     return database.list_waitlist(
