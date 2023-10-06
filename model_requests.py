@@ -27,7 +27,7 @@ class AddSectionRequest(BaseModel):
     course_id: int
     classroom: str
     capacity: int
-    waitlist_capacity: int
+    waitlist_capacity: int = 15
     day: str
     begin_time: str
     end_time: str
