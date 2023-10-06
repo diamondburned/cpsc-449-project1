@@ -457,3 +457,85 @@ def update_section(
 
     sections = database.list_sections(db, [section_id])
     return sections[0]
+
+
+@app.delete("/users/{user_id}/enrollments/{section_id}")
+def drop_user_enrollment(
+    user_id: int,
+    section_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Enrollment:
+    db.execute(
+        """
+        UPDATE enrollments
+        SET status = 'Dropped'
+        WHERE
+            user_id = :user_id
+            AND section_id = :section_id
+            AND status = 'Enrolled'
+        """,
+    )
+
+    enrollments = database.list_enrollments(db, [(user_id, section_id)])
+    return enrollments[0]
+
+
+@app.delete("/users/{user_id}/waitlist/{section_id}")
+def drop_user_waitlist(
+    user_id: int,
+    section_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    # Delete the entry from the waitlist, storing the position.
+    row = fetch_row(
+        db,
+        """
+        DELETE FROM waitlist
+        WHERE
+            user_id = :user_id
+            AND section_id = :section_id
+        RETURNING position
+        """,
+        {"user_id": user_id, "section_id": section_id},
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not on the waitlist.",
+        )
+
+    position = row["waitlist.position"]
+
+    # Ensure that every waitlist entry after this one has its position decremented.
+    db.execute(
+        """
+        UPDATE waitlist
+        SET position = position - 1
+        WHERE
+            section_id = :section_id
+            AND position > :position
+        """,
+        {"section_id": section_id, "position": position},
+    )
+
+    # Delete the waitlist enrollment.
+    db.execute(
+        """
+        DELETE FROM enrollments
+        WHERE
+            user_id = :user_id
+            AND section_id = :section_id
+            AND status = 'Waitlisted'
+        """,
+        {"user_id": user_id, "section_id": section_id},
+    )
+
+
+@app.delete("/sections/{section_id}/enrollments/{user_id}")
+def drop_section_enrollment(
+    section_id: int,
+    user_id: int,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Enrollment:
+    # No auth so these two methods behave virtually identically.
+    return drop_user_enrollment(user_id, section_id, db)
