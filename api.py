@@ -234,7 +234,7 @@ def list_user_enrollments(
             AND sections.deleted = FALSE
             AND enrollments.user_id = ?
         """,
-        ("Dropped", user_id, user_id),
+        (status, user_id),
     )
     rows = [extract_row(row, "enrollments") for row in rows]
     return database.list_enrollments(
