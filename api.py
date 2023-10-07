@@ -146,7 +146,7 @@ def list_section_enrollments(
     section_id: int,
     status=EnrollmentStatus.ENROLLED,
     db: sqlite3.Connection = Depends(get_db),
-) -> list[ListSectionEnrollmentsResponseItem]:
+) -> list[ListSectionEnrollmentsItem]:
     rows = fetch_rows(
         db,
         """
@@ -166,8 +166,7 @@ def list_section_enrollments(
         [(row["user_id"], row["section_id"]) for row in rows],
     )
     return [
-        ListSectionEnrollmentsResponseItem(**dict(enrollment))
-        for enrollment in enrollments
+        ListSectionEnrollmentsItem(**dict(enrollment)) for enrollment in enrollments
     ]
 
 
@@ -175,7 +174,7 @@ def list_section_enrollments(
 def list_section_waitlist(
     section_id: int,
     db: sqlite3.Connection = Depends(get_db),
-) -> list[Waitlist]:
+) -> list[ListSectionWaitlistItem]:
     rows = fetch_rows(
         db,
         """
@@ -187,10 +186,11 @@ def list_section_waitlist(
         (section_id,),
     )
     rows = [extract_row(row, "waitlist") for row in rows]
-    return database.list_waitlist(
+    waitlist = database.list_waitlist(
         db,
         [(row["user_id"], row["section_id"]) for row in rows],
     )
+    return [ListSectionWaitlistItem(**dict(item)) for item in waitlist]
 
 
 @app.get("/users")
