@@ -45,11 +45,5 @@ class ListSectionWaitlistItem(BaseModel):
 
 
 class UpdateSectionRequest(BaseModel):
-    classroom: str | None
-    capacity: int | None
-    waitlist_capacity: int | None
-    day: str | None
-    begin_time: str | None
-    end_time: str | None
     freeze: bool | None
     instructor_id: int | None

@@ -30,19 +30,19 @@ INSERT INTO sections VALUES
 (4, 2, 'MH107', 32, 15, 'Thursday', '9am', '11:30am', 4, 0, 0);
 
 INSERT INTO enrollments VALUES
-(5, 1, 'Enrolled', 'A', '2023-09-15'),
-(6, 1, 'Enrolled', 'B', '2023-09-15'),
-(7, 1, 'Enrolled', 'C', '2023-09-15'),
-(8, 1, 'Enrolled', 'B+', '2023-09-15'),
-(9, 2, 'Enrolled', 'A-', '2023-09-15'),
+(5, 1, 'Enrolled', NULL, '2023-09-15'),
+(6, 1, 'Enrolled', NULL, '2023-09-15'),
+(7, 1, 'Enrolled', NULL, '2023-09-15'),
+(8, 1, 'Enrolled', NULL, '2023-09-15'),
+(9, 2, 'Enrolled', NULL, '2023-09-15'),
 (10, 2, 'Dropped', NULL, '2023-09-15'),
-(11, 2, 'Enrolled', 'A+', '2023-09-15'),
-(12, 3, 'Enrolled', 'C+', '2023-09-15'),
+(11, 2, 'Enrolled', NULL, '2023-09-15'),
+(12, 3, 'Enrolled', NULL, '2023-09-15'),
 (13, 3, 'Dropped', NULL, '2023-09-15'),
-(14, 4, 'Enrolled', 'A-', '2023-09-15'),
-(5, 3, 'Enrolled', 'B', '2023-09-15'),
-(6, 4, 'Enrolled', 'B', '2023-09-15'),
-(7, 2, 'Enrolled', 'B', '2023-09-15');
+(14, 4, 'Enrolled', NULL, '2023-09-15'),
+(5, 3, 'Enrolled', NULL, '2023-09-15'),
+(6, 4, 'Enrolled', NULL, '2023-09-15'),
+(7, 2, 'Enrolled', NULL, '2023-09-15');
 
 -- For waitlist table
 INSERT INTO waitlist VALUES
