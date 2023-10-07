@@ -407,6 +407,7 @@ def add_section(
             """
             INSERT INTO sections(course_id, classroom, capacity, waitlist_capacity, day, begin_time, end_time, freeze, instructor_id)
             VALUES(:course_id, :classroom, :capacity, :waitlist_capacity, :day, :begin_time, :end_time, :freeze, :instructor_id)
+            RETURNING id
             """,
             dict(section),
         )
