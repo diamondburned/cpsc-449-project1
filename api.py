@@ -9,6 +9,7 @@ from typing import Optional
 import database
 
 from fastapi.responses import HTMLResponse
+from fastapi.routing import APIRoute
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from database import extract_row, get_db, fetch_rows, fetch_row
@@ -145,7 +146,7 @@ def list_section_enrollments(
     section_id: int,
     status=EnrollmentStatus.ENROLLED,
     db: sqlite3.Connection = Depends(get_db),
-) -> list[Enrollment]:
+) -> list[ListSectionEnrollmentsResponseItem]:
     rows = fetch_rows(
         db,
         """
@@ -160,10 +161,14 @@ def list_section_enrollments(
         (status, section_id),
     )
     rows = [extract_row(row, "enrollments") for row in rows]
-    return database.list_enrollments(
+    enrollments = database.list_enrollments(
         db,
         [(row["user_id"], row["section_id"]) for row in rows],
     )
+    return [
+        ListSectionEnrollmentsResponseItem(**dict(enrollment))
+        for enrollment in enrollments
+    ]
 
 
 @app.get("/sections/{section_id}/waitlist")
@@ -565,3 +570,9 @@ def delete_section(section_id: int, db: sqlite3.Connection = Depends(get_db)):
     )
     for u in uw:
         drop_user_waitlist(u[0], section_id, db)
+
+
+# https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/#using-the-path-operation-function-name-as-the-operationid
+for route in app.routes:
+    if isinstance(route, APIRoute):
+        route.operation_id = route.name
