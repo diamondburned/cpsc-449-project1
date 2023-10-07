@@ -34,8 +34,14 @@ class AddSectionRequest(BaseModel):
     instructor_id: int
 
 
-class ListEnrollmentsResponse(BaseModel):
-    enrollments: list[Enrollment]
+class ListSectionEnrollmentsItem(BaseModel):
+    user: User
+    grade: str | None
+
+
+class ListSectionWaitlistItem(BaseModel):
+    user: User
+    position: int
 
 
 class UpdateSectionRequest(BaseModel):

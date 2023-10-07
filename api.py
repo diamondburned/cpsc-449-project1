@@ -375,37 +375,46 @@ def create_enrollment(
 
 
 @app.post("/courses")
-def add_course(course: AddCourseRequest, db: sqlite3.Connection = Depends(get_db)):
-    c = dict(course)
-
+def add_course(
+    course: AddCourseRequest,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Course:
     try:
-        cur = db.execute(
+        row = fetch_row(
+            db,
             """
-                INSERT INTO courses(code, name, department_id)
-                VALUES(:code, :name, :department_id)
+            INSERT INTO courses(code, name, department_id)
+            VALUES(:code, :name, :department_id)
+            RETURNING id
             """,
-            c,
+            dict(course),
         )
+        assert row
+        courses = database.list_courses(db, [row["courses.id"]])
+        return courses[0]
     except Exception:
         raise HTTPException(status_code=409, detail=f"Failed to add course:")
-    return c
 
 
 @app.post("/sections")
-def add_section(section: AddSectionRequest, db: sqlite3.Connection = Depends(get_db)):
-    s = dict(section)
-
+def add_section(
+    section: AddSectionRequest,
+    db: sqlite3.Connection = Depends(get_db),
+) -> Section:
     try:
-        cur = db.execute(
+        row = fetch_row(
+            db,
             """
-                INSERT INTO sections(course_id, classroom, capacity, waitlist_capacity, day, begin_time, end_time, freeze, instructor_id)
-                VALUES(:course_id, :classroom, :capacity, :waitlist_capacity, :day, :begin_time, :end_time, :freeze, :instructor_id)
+            INSERT INTO sections(course_id, classroom, capacity, waitlist_capacity, day, begin_time, end_time, freeze, instructor_id)
+            VALUES(:course_id, :classroom, :capacity, :waitlist_capacity, :day, :begin_time, :end_time, :freeze, :instructor_id)
             """,
-            s,
+            dict(section),
         )
+        assert row
+        sections = database.list_sections(db, [row["sections.id"]])
+        return sections[0]
     except Exception:
         raise HTTPException(status_code=409, detail=f"Failed to add course:")
-    return s
 
 
 @app.patch("/sections/{section_id}")
