@@ -387,23 +387,20 @@ def add_course(course: AddCourseRequest, db: sqlite3.Connection = Depends(get_db
 
 
 @app.post("/sections")
-def add_section(
-    section: AddSectionRequest,
-    db: sqlite3.Connection = Depends(get_db),
-) -> Section:
+def add_section(section: AddSectionRequest, db: sqlite3.Connection = Depends(get_db)):
+    s = dict(section)
+
     try:
         cur = db.execute(
             """
                 INSERT INTO sections(course_id, classroom, capacity, waitlist_capacity, day, begin_time, end_time, freeze, instructor_id)
                 VALUES(:course_id, :classroom, :capacity, :waitlist_capacity, :day, :begin_time, :end_time, :freeze, :instructor_id)
             """,
-            dict(section),
+            s,
         )
-    except Exception as e:
-        raise HTTPException(status_code=409, detail=f"Failed to add course: {e}")
-
-    sections = database.list_sections(db, [section.course_id])
-    return sections[0]
+    except Exception:
+        raise HTTPException(status_code=409, detail=f"Failed to add course:")
+    return s
 
 
 @app.patch("/sections/{section_id}")
@@ -459,7 +456,7 @@ def drop_user_enrollment(
             AND section_id = :section_id
             AND status = 'Enrolled'
         """,
-        {"user_id": user_id, "section_id": section_id}
+        {"user_id": user_id, "section_id": section_id},
     )
 
     enrollments = database.list_enrollments(db, [(user_id, section_id)])
@@ -526,14 +523,12 @@ def drop_section_enrollment(
     # No auth so these two methods behave virtually identically.
     return drop_user_enrollment(user_id, section_id, db)
 
+
 @app.delete("/sections/{section_id}")
-def delete_section(
-    section_id: int,
-    db: sqlite3.Connection = Depends(get_db)
-):
+def delete_section(section_id: int, db: sqlite3.Connection = Depends(get_db)):
     # check validity of section_id
     get_section(section_id, db)
-    
+
     # mark section as deleted
     db.execute(
         """
@@ -541,9 +536,9 @@ def delete_section(
         SET deleted = TRUE
         WHERE id = :section_id
         """,
-        {"section_id": section_id}
+        {"section_id": section_id},
     )
-    
+
     # drop enrolled users
     ue = fetch_rows(
         db,
@@ -552,12 +547,12 @@ def delete_section(
         WHERE 
             section_id = :section_id
         """,
-        { "section_id": section_id }
+        {"section_id": section_id},
     )
     for u in ue:
         print(u)
         drop_user_enrollment(u[0], section_id, db)
-    
+
     # drop waitlisted users
     uw = fetch_rows(
         db,
@@ -566,7 +561,7 @@ def delete_section(
         WHERE 
             section_id = :section_id
         """,
-        { "section_id": section_id }
+        {"section_id": section_id},
     )
     for u in uw:
         drop_user_waitlist(u[0], section_id, db)
